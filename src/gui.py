@@ -19,6 +19,7 @@ Randomly generates a valid sudoku board to be passed to the GUI.
 Returns the board.
 '''
 def generate_board():
+    #return breaks the infinite loop
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -33,11 +34,14 @@ def generate_board():
                         continue
                     else:
                         board[i][j] = 0
-        partialBoard = deepcopy(board)
+        partialBoard = deepcopy(board) #copy of board so solve doesn't modify it
         if solve(board):
             return partialBoard
 
 class Board:
+    ''' Board class to contain the 2D array representation of the board,
+    a copy of the solved version of the board, the tiles for the GUI and
+    the GUI window'''
     def __init__(self, window):
         self.board = generate_board()
         self.solvedBoard = deepcopy(self.board)
@@ -45,28 +49,35 @@ class Board:
         self.tiles = [[Tile(self.board[i][j], window, i*60, j*60) for j in range(BOARD_SIZE)] for i in range(BOARD_SIZE)]
         self.window = window
 
+    ''' Board method that draws the lines and tiles of the board onto the window '''
     def draw_board(self):
         for i in range(BOARD_SIZE):
             for j in range(BOARD_SIZE):
+                #vertical lines
                 if j%3 == 0 and j != 0:
                     pygame.draw.line(self.window, C_BLACK, ((j//3)*180, 0), ((j//3)*180, 540), 4)
 
+                #horizontal lines
                 if i%3 == 0 and i != 0:
                     pygame.draw.line(self.window, C_BLACK, (0, (i//3)*180), (540, (i//3)*180), 4)
 
                 self.tiles[i][j].draw_tile(C_BLACK, 1)
 
+                #only display numbers 1-9, dont display 0
                 if self.tiles[i][j].value != 0:
                     self.tiles[i][j].display_value(self.tiles[i][j].value, (21+(j*60), (16+(i*60))), C_BLACK)
-                
+        #footer line        
         pygame.draw.line(self.window, C_BLACK, (0, ((i+1)//3)*180), (540, ((i+1)//3)*180), 4)
 
+    ''' Board method that deselects a tile on the board '''
     def deselect(self, tile):
         for i in range(BOARD_SIZE):
             for j in range(BOARD_SIZE):
                 if self.tiles[i][j] != tile:
                     self.tiles[i][j].selected = False
 
+    ''' Board method that redraws the board to show correct, incorrect,
+    selected tiles, as well as the time and number of wrong guesses '''
     def redraw(self, keys, wrong, time):
         self.window.fill((255,255,255))
         self.draw_board()
@@ -81,6 +92,7 @@ class Board:
                 elif self.tiles[i][j].incorrect:
                     self.tiles[j][i].draw_tile(C_RED, 4)
 
+        #displays user entered value until enter key is pressed
         if len(keys) != 0:
             for value in keys:
                 self.tiles[value[0]][value[1]].display_value(keys[value], (21+(value[0]*60), (16+(value[1]*60))), C_GREY)
@@ -99,6 +111,8 @@ class Board:
         self.window.blit(text, (388, 542))
         pygame.display.flip()
 
+    ''' Board method that solves the board on the GUI version
+    of the board '''
     def solve_gui(self, wrong, time):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -113,22 +127,24 @@ class Board:
                 self.board[empty[0]][empty[1]] = num+1
                 self.tiles[empty[0]][empty[1]].value = num+1
                 self.tiles[empty[0]][empty[1]].correct = True
-                pygame.time.delay(50)
+                pygame.time.delay(50) #time delay to allow for easy visualization
                 self.redraw({}, wrong, time)
-                wrong -= 1
+
                 if self.solve_gui(wrong, time):
                     return True
-                wrong +=1
+
                 self.board[empty[0]][empty[1]] = 0
                 self.tiles[empty[0]][empty[1]].value = 0
                 self.tiles[empty[0]][empty[1]].incorrect = True
                 self.tiles[empty[0]][empty[1]].correct = False
-                pygame.time.delay(50)
+                pygame.time.delay(50) #time delay to allow for easy visualization
                 self.redraw({}, wrong, time)
             
 
 class Tile:
-    
+    ''' Tile Class that contains the value in the tile, 
+    the window to be drawn on, the tiles position/size, 
+    and if it is selected, correct, or incorrect '''
     def __init__(self, value, window, x1, y1):
         self.value = value
         self.window = window
@@ -137,14 +153,17 @@ class Tile:
         self.correct = False
         self.incorrect = False
 
+    ''' Tile method that draws the tile on the window'''
     def draw_tile(self, color, thickness):
         pygame.draw.rect(self.window, color, self.rect, thickness)
 
+    ''' Tile method to display the value in the tile'''
     def display_value(self, value, position, color):
         font = pygame.font.SysFont('lato', 45)
         text = font.render(str(value), True, color)
         self.window.blit(text, position)
 
+    ''' Tile method that returnss the coordinates of the tile clicked'''
     def tile_clicked(self, mouse_pos):
         if self.rect.collidepoint(mouse_pos):
             self.selected = True
@@ -178,7 +197,7 @@ def main():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                exit()
+                exit()                
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 mousePos = pygame.mouse.get_pos()
@@ -234,6 +253,7 @@ def main():
                             board.board[selected[1]][selected[0]] = keyDict[selected]
                             del keyDict[selected]
 
+                #start solver
                 if event.key == pygame.K_SPACE:
                     for i in range(BOARD_SIZE):
                         for j in range(BOARD_SIZE):
@@ -247,6 +267,7 @@ def main():
                     running = False
 
         board.redraw(keyDict, wrong, passedTime)
+    #allows for window to remain until user exits
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
